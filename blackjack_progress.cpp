@@ -142,12 +142,12 @@ void printHand(vector<Card> hand) {
 void printDealerHand(vector<Card> hand) {
     cout << "Dealer's hand:" << endl << endl;
     cout << "Hidden" << endl;
-    cout << dealerHand[1].rank << " of " << dealerHand[1].suit << endl << endl;
+    cout << hand[1].rank << " of " << hand[1].suit << endl << endl;
 }
 
 //print cards in player's hands
 void printPlayerHands(vector<vector<Card>> hands) {
-    for (int i = 0; i < hands.size(); i++) {
+    for (int i = 0; i < (hands.size() - 1); i++) {
         cout << "Player " << i + 1 << "'s hand:" << endl << endl;
         printHand(hands[i]);
         cout << endl;
@@ -157,7 +157,7 @@ void printPlayerHands(vector<vector<Card>> hands) {
 //print cards in all hands
 void printAllHands(vector<vector<Card>> hands) {
     printPlayerHands(hands);
-    printDealerHand(hands[numPlayers]);
+    printDealerHand(hands.back());
 }
 
 //calculate hand value
@@ -240,7 +240,7 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
                 hands.push_back(newHand);
                 numPlayers++;
                 playerMoney.push_back(playerMoney[i]);
-                cout << "Player " << i+1 << " has been split into Player " << i << " and Player " << numPlayers << "." << endl;
+                cout << "Player " << i+1 << " has been split into Player " << i+1 << " and Player " << numPlayers << "." << endl;
             }
         }
 
@@ -290,15 +290,15 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
 
 //dealer's turn, checking for blackjack, then hitting until 17 or bust
 void dealerTurn(vector<Card>& deck, vector<vector<Card>>& hands) {
-    if (isBlackjack(hands[0])) {
+    if (isBlackjack(hands.back())) {
         cout << "Dealer has blackjack!" << endl;
         return;
     }
-    while (handValue(hands[0]) < 17) {
-        hands[0].push_back(deck.back());
+    while (handValue(hands.back()) < 17) {
+        hands.back().push_back(deck.back());
         deck.pop_back();
     }
-    if (isBust(hands[0])) {
+    if (isBust(hands.back())) {
         cout << "Dealer has busted!" << endl;
     }
 }
