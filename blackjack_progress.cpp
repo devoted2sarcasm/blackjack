@@ -142,7 +142,7 @@ void printHand(vector<Card> hand) {
 void printDealerHand(vector<Card> hand) {
     cout << "Dealer's hand:" << endl << endl;
     cout << "Hidden" << endl;
-    cout << hand[1].rank << " of " << hand[1].suit << endl << endl;
+    cout << dealerHand[1].rank << " of " << dealerHand[1].suit << endl << endl;
 }
 
 //print cards in player's hands
@@ -156,8 +156,8 @@ void printPlayerHands(vector<vector<Card>> hands) {
 
 //print cards in all hands
 void printAllHands(vector<vector<Card>> hands) {
-    printDealerHand(hands[0]);
     printPlayerHands(hands);
+    printDealerHand(hands[numPlayers]);
 }
 
 //calculate hand value
@@ -222,14 +222,14 @@ bool isBust(vector<Card> hand) {
 
 //players turns, checking for opportunity to split or double down, then offering to hit or stand (on each hand if split), no additional hits if double, and checking for bust
 void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers, vector<int>& playerMoney, int& bet) {
-    for (int i = 1; i < numPlayers; i++) {
+    for (int i = 0; i < numPlayers; i++) {
         if (isBlackjack(hands[i])) {
-            cout << "Player " << i << " has blackjack!" << endl;
+            cout << "Player " << i+1 << " has blackjack!" << endl;
             playerMoney[i] += bet * 1.5;
             continue;
         }
         if (isPair(hands[i])) {
-            cout << "Player " << i << " has a pair of " << hands[i][0].rank << "s." << endl;
+            cout << "Player " << i+1 << " has a pair of " << hands[i][0].rank << "s." << endl;
             cout << "Would you like to split? (y/n): ";
             char split;
             cin >> split;
@@ -240,13 +240,13 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
                 hands.push_back(newHand);
                 numPlayers++;
                 playerMoney.push_back(playerMoney[i]);
-                cout << "Player " << i << " has been split into Player " << i << " and Player " << numPlayers << "." << endl;
+                cout << "Player " << i+1 << " has been split into Player " << i << " and Player " << numPlayers << "." << endl;
             }
         }
 
         int j = 0;
         while (j < hands[i].size() && !isBust(hands[i])) {
-            cout << "Player " << i << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+            cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
             printHand(hands[i]);
             if (j == 0) {
                 cout << "Would you like to double down? (y/n): ";
@@ -256,10 +256,10 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
                     bet *= 2;
                     hands[i].push_back(deck.back());
                     deck.pop_back();
-                    cout << "Player " << i << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+                    cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
                     printHand(hands[i]);
                     if (isBust(hands[i])) {
-                        cout << "Player " << i << " has busted!" << endl;
+                        cout << "Player " << i+1 << " has busted!" << endl;
                         playerMoney[i] -= bet;
                     }
                     break;
@@ -273,13 +273,13 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
             }
             hands[i].push_back(deck.back());
             deck.pop_back();
-            cout << "Player " << i << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+            cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
             printHand(hands[i]);
             j++;
         }
 
         if (isBust(hands[i])) {
-            cout << "Player " << i << " has busted!" << endl;
+            cout << "Player " << i+1 << " has busted!" << endl;
             playerMoney[i] -= bet;
         }
 
