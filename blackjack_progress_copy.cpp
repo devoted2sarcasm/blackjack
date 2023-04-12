@@ -186,32 +186,6 @@ int handValue(vector<Card> hand) {
     return value;
 }
 
-
-//better version, other to be deprecated
-int get_hand_value(const vector<Card>& hand, bool soft) {
-    int value = 0;
-    int num_aces = 0;
-    for (const auto& card : hand) {
-        if (card.rank == "Ace") {
-            num_aces++;
-            value += 11;
-        } else if (card.rank == "King" || card.rank == "Queen" || card.rank == "Jack") {
-            value += 10;
-        } else {
-            value += stoi(card.rank);
-        }
-    }
-    while (value > 21 && num_aces > 0) {
-        value -= 10;
-        num_aces--;
-    }
-    if (soft && num_aces > 0 && value <= 11) {
-        value += 10;
-    }
-    return value;
-}
-
-
 //check if hand is a blackjack
 bool isBlackjack(vector<Card> hand) {
     return hand.size() == 2 && handValue(hand) == 21;
@@ -226,14 +200,6 @@ bool isPair(vector<Card> hand) {
 bool isBust(vector<Card> hand) {
     int value = handValue(hand);
     if (value > 21) {
-        for (Card c : hand) {
-            if (c.rank == "Ace") {
-                value -= 10;
-                if (value <= 21) {
-                    return false;
-                }
-            }
-        }
         return true;
     }
     return false;
@@ -288,7 +254,7 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
 
         int j = 0;
         while (j < hands[i].size() && !isBust(hands[i])) {
-            cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+            cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
             printHand(hands[i]);
             if (j == 0) {
                 cout << "Would you like to double down? (y/n): ";
@@ -299,7 +265,7 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
                     bets[i] *= 2;
                     hands[i].push_back(deck.back());
                     deck.pop_back();
-                    cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+                    cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
                     printHand(hands[i]);
                     if (isBust(hands[i])) {
                         cout << "Player " << i+1 << " has busted!" << endl;
@@ -316,7 +282,7 @@ void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers
             }
             hands[i].push_back(deck.back());
             deck.pop_back();
-            cout << "Player " << i+1 << "'s hand (value: " << get_hand_value(hands[i], false) << "):" << endl;
+            cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
             printHand(hands[i]);
             j++;
         }
@@ -397,6 +363,7 @@ void make_bets(vector<int>& playerMoney, vector<int>&bets) {
 void checkWinner(vector<vector<Card>> hands, vector<int>& playerMoney, vector<int>& bets) {
     int dealerValue = handValue(hands.back());
     if (isBust(hands.back())) {
+        cout << "Dealer has busted!" << endl;
         for (int i = 0; i < (hands.size()-1); i++) {
             if (!isBust(hands[i])) {
                 cout << "Player " << i+1 << " wins!" << endl;

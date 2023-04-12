@@ -338,7 +338,6 @@ void makeBets(vector<int>& playerMoney, int& bet) {
 }
 
 
-
 //check for winner, paying out if player wins
 void checkWinner(vector<vector<Card>> hands, vector<int>& playerMoney, int bet) {
     int dealerValue = handValue(hands.back());
