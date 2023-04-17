@@ -112,25 +112,30 @@ int chooseMoney() {
 }
 
 //deal cards to players, returning vector of cards to manipulate with hits, stands, etc, dealer is last player, first card for dealer hidden
-vector<vector<Card>> dealCards(vector<Card>& deck, int numPlayers) {
-    vector<vector<Card>> hands;
+vector<vector<vector<Card>>> dealCards(vector<Card>& deck, int numPlayers) {
+    vector<vector<vector<Card>>> hands;
     for (int i = 0; i < numPlayers; i++) {
-        vector<Card> hand;
-        for (int j = 0; j < 2; j++) {
-            hand.push_back(deck.back());
-            deck.pop_back();
-        }
-        hands.push_back(hand);
+        hands[i][0].push_back(deck.back());
     }
-    vector<Card> dealerHand;
-    for (int j = 0; j < 2; j++) {
-        dealerHand.push_back(deck.back());
-        deck.pop_back();
+    hands.back()[0].push_back(deck.back());
+    for (int i = 0; i < numPlayers; i++) {
+        hands[i][0].push_back(deck.back());
     }
-    dealerHand[0].hidden = true;
-    hands.push_back(dealerHand);
+    hands.back()[0].push_back(deck.back());
+    hands.back()[0][0].hidden = true;
+
+    for (int i = 0; i < numPlayers; i++) {
+        cout << "########## Player " << i+1 << " has: " << endl;
+        cout << hands[i][0][0].rank << " of " << hands[i][0][0].suit << endl;
+        cout << hands[i][0][1].rank << " of " << hands[i][0][1].suit << endl;
+    }
+
+    printDealerHand(hands.back()[0]);
+
     return hands;
 }
+
+
 
 //print cards in hand
 void printHand(vector<Card> hand) {
@@ -154,7 +159,7 @@ void printDealerHand(vector<Card> hand) {
 }
 
 //print cards in player's hands
-void printPlayerHands(vector<vector<Card>> hands) {
+void printPlayerHands(vector<vector<vector<Card>>> hands) {
     for (int i = 0; i < (hands.size() - 1); i++) {
         cout << "##########  Player " << i + 1 << "'s hand:" << endl << endl;
         printHand(hands[i]);
@@ -163,7 +168,7 @@ void printPlayerHands(vector<vector<Card>> hands) {
 }
 
 //print cards in all hands
-void printAllHands(vector<vector<Card>> hands) {
+void printAllHands(vector<vector<vector<Card>>> hands) {
     printPlayerHands(hands);
     printDealerHand(hands.back());
 }
@@ -210,125 +215,35 @@ bool isBust(vector<Card> hand) {
 //functionality needs to be added to properly handle splits as far as the hands vector and bets vector go. inserts seem to be the best idea, as the dealer's hand will always be last, but there's a lot of counters and nuance to how to handle which hands belong to which player if more than one are splitting
 //maybe a new nested vector, where the first element is all of player 1's hands, the second element is all of player 2's hands, and each time a hand is split, you'll have to change the bets vector to accomodate the new bet, and then you'll need to keep track of how many of the player's hands <beat, push, lose> and multiply his winnings accordingly and add them back to the playerMoney vector
 
-void playerTurns(vector<Card>& deck, vector<vector<Card>>& hands, int numPlayers, vector<int>& playerMoney, vector<int>& bets) {
-    if (isBlackjack(hands.back())) {
+void playerTurns(vector<vector<vector<Card>>>& hands, vector<Card>& deck, vector<int>& playerMoney, vector<int> bets, int numPlayers) {
+    if (isBlackjack(hands.back()[0])) {
         cout << "Dealer has blackjack!" << endl;
-        for (int i = 0; i < numPlayers; i++) {
-            if (isBlackjack(hands[i])) {
-                cout << "Player " << i+1 << " pushes blackjack!" << endl;
-                playerMoney[i] += bets[i];
-            }
-            else {
-                cout << "Player " << i+1 << " loses." << endl;
-            }
-        }
         return;
     }
-    for (int i = 0; i < numPlayers; i++) {
-        if (isBlackjack(hands[i])) {
-            cout << "Player " << i+1 << " has blackjack!" << endl;
-            playerMoney[i] += ((bets[i]) * 2.5);
-            continue;
+    else {
+        for (int i = 0; i < (hands.size() - 1); i++) {
+            singleTurn(hands[i], playerMoney[i], bets[i], deck);
         }
-        if (isPair(hands[i])) {
-            cout << "Player " << i+1 << " has a pair of " << hands[i][0].rank << "s." << endl;
-            cout << "Would you like to split? (y/n): ";
-            char split;
-            cin >> split;
-            //if yes, all remaining players hands, including dealer, should be pushed back one spot, so that the current player plays 2 hands before progressing to the next
-            //i may not have this implemented in time, but i need to get the rest working properly before polishing. as long as i can get an additional hand to be dealt, we're good to start.
-
-            if (split == 'y') {
-                if (playerMoney[i] < bets[i]) {
-                    cout << "You do not have enough money to split." << endl;
-                    continue;
-                }
-                vector<Card> newHand;
-                //removes second card from hand and adds it to new hand
-                newHand.push_back(hands[i][1]);
-                hands[i].pop_back();
-                //deals new card to each hand
-                hands[i].push_back(deck.back());
-                deck.pop_back();
-                newHand.push_back(deck.back());
-                deck.pop_back();
-                //adds new hand to hands vector
-                hands.push_back(newHand);
-                numPlayers++;
-                playerMoney.push_back(playerMoney[i]);
-                cout << "Player " << i+1 << " has been split into Player " << i+1 << " and Player " << numPlayers << "." << endl;
-            }
-        }
-
-        int j = 0;
-        while (j < hands[i].size() && !isBust(hands[i])) {
-            cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
-            printHand(hands[i]);
-            if (j == 0) {
-                cout << "Would you like to double down? (y/n): ";
-                char doubleDown;
-                cin >> doubleDown;
-                if (doubleDown == 'y') {
-                    if (playerMoney[i] < bets[i]) {
-                        cout << "You do not have enough money to double down." << endl;
-                    }
-                    else {
-                        playerMoney[i] -= bets[i];
-                        bets[i] *= 2;
-                        hands[i].push_back(deck.back());
-                        deck.pop_back();
-                        cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
-                        printHand(hands[i]);
-                        if (isBust(hands[i])) {
-                            cout << "Player " << i+1 << " has busted!" << endl;
-                            playerMoney[i] -= bets[i];
-                        }
-                        break;
-                    }
-                }
-            }
-            cout << "Would you like to hit? (y/n): ";
-            char hit;
-            cin >> hit;
-            if (hit == 'n') {
-                break;
-            }
-            hands[i].push_back(deck.back());
-            deck.pop_back();
-            cout << "Player " << i+1 << "'s hand (value: " << handValue(hands[i]) << "):" << endl;
-            printHand(hands[i]);
-            j++;
-        }
-
-        if (isBust(hands[i])) {
-            cout << "Player " << i+1 << " has busted!" << endl;
-            //this is handled when bets are made, this will subtract the bet from the player AGAIN
-            //playerMoney[i] -= bets[i];
-        }
-
-        cout << "------------------------" << endl;
     }
 }
 
-
 //dealer's turn, checking for blackjack, then hitting until 17 or bust
-void dealerTurn(vector<Card>& deck, vector<vector<Card>>& hands) {
-    hands.back()[0].hidden = false;
-    printDealerHand(hands.back());
-    /*if (isBlackjack(hands.back())) {
-        cout << "Dealer has blackjack!" << endl;
-        return;
-    }*/ //deprecated, dealer blackjack is checked before player turns
-    while (handValue(hands.back()) < 17) {
+void dealerTurn(vector<Card>& deck, vector<vector<vector<Card>>>& hands) {
+    hands.back()[0][0].hidden = false;
+
+    printDealerHand(hands.back()[0]);
+
+    while (handValue(hands.back()[0]) < 17) {
         cout << "Dealer hits a " << deck.back().rank << " of " << deck.back().suit << "." << endl;
-        cout << "Dealer now has: " << handValue(hands.back()) << endl;
-        hands.back().push_back(deck.back());
+        hands.back()[0].push_back(deck.back());
+        cout << "Dealer now has: " << handValue(hands.back()[0]) << endl;
         deck.pop_back();
-        //printDealerHand(hands.back());
     }
-    if (isBust(hands.back())) {
+    
+    if (isBust(hands.back()[0])) {
         cout << "Dealer has busted!" << endl;
     }
+    return;
 }
 
 /*
@@ -376,53 +291,89 @@ void make_bets(vector<int>& playerMoney, vector<int>&bets, int numPlayers) {
 
 
 //check for winner, paying out if player wins
-void checkWinner(vector<vector<Card>> hands, vector<int>& playerMoney, vector<int>& bets) {
-    int dealerValue = handValue(hands.back());
-    if (isBust(hands.back())) {
-        cout << "Dealer has busted!" << endl;
-        for (int i = 0; i < (hands.size()-1); i++) {
-            if (!isBust(hands[i])) {
-                cout << "Player " << i+1 << " wins! You now have -$" << (playerMoney[i] + (bets[i])*2) << "-" << endl;
+void checkWinner(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vector<int>& bets) {
+    int dealerValue = handValue(hands.back()[0]);
+    for (int i = 0; i < hands.size()-1; i++) {
+        for (int j = 0; j < hands[i].size(); j++) {
+            if (handValue(hands[i][j]) > dealerValue && !isBust(hands[i][j])) {
+                cout << "Player " << i+1 << ", hand " << j+1 << " wins!" << endl;
                 playerMoney[i] += bets[i] * 2;
             }
-        }
-    }
-    else {
-        for (int i = 0; i < (hands.size()-1); i++) {
-            int playerValue = handValue(hands[i]);
-            if (playerValue > dealerValue && !isBust(hands[i])) {
-                cout << "Player " << i+1 << " wins! You now have -$" << (playerMoney[i] + (bets[i])*2) << "-" << endl;
-                playerMoney[i] += bets[i] * 2;
-            }
-            else if (playerValue == dealerValue) {
-                cout << "Player " << i+1 << " pushes. You now have -$" << (playerMoney[i] + bets[i]) << "-" << endl;
+            else if (handValue(hands[i][j]) == dealerValue) {
+                cout << "Player " << i+1 << ", hand " << j+1 << " pushes." << endl;
                 playerMoney[i] += bets[i];
             }
             else {
-                cout << "Player " << i+1 << " loses! You now have -$" << (playerMoney[i]) << "-" << endl;
+                cout << "Player " << i+1 << ", hand " << j+1 << " loses." << endl;
             }
         }
     }
+    for (int i = 0; i < playerMoney.size(); i++) {
+        cout << "Player " << i+1 << " now has: $" << playerMoney[i] << endl;
+    }
     bets.clear();
+    return;
 }
 
-    //as originally written, this function would have the players lose even if the dealer busted, which is obv not correct.
-/*    for (int i = 0; i < (hands.size()-1); i++) {
-        int playerValue = handValue(hands[i]);
-        if (playerValue > dealerValue && !isBust(hands[i])) {
-            cout << "Player " << i+1 << " wins!" << endl;
-            playerMoney[i] += bet * 2;
+//function for a single player taking a full turn
+  
+void singleTurn(vector<vector<Card>>& playerHands, int& playerMoney, int bet, vector<Card>& deck) {
+    for (int i = 0; i < playerHands.size(); i++) {
+        while (isPair(playerHands[i])) {
+            cout << "Hand " << i+1 << " has a pair of " << playerHands[i][0].rank << "s." << endl;
+            cout << "Would you like to split? (y/n): " << endl;
+            char split;
+            cin >> split;
+            if (split == 'y') {
+                if (playerMoney < bet) {
+                    cout << "You don't have enough money to split" << endl;
+                    break;
+                }
+                else {
+                    playerMoney -= bet;
+                    vector<Card> newHand;
+                    newHand.push_back(playerHands[i][1]);
+                    playerHands[i].pop_back();
+                    playerHands.push_back(newHand);
+                    playerHands[i].push_back(deck.back());
+                    deck.pop_back();
+                    playerHands[i+1].push_back(deck.back());
+                    deck.pop_back();
+                    continue;
+                }
+            }
+            else {
+                break;
+            }
         }
-        else if (playerValue == dealerValue) {
-            cout << "Player " << i+1 << " pushes." << endl;
-            playerMoney[i] += bet;
+        hitStand(playerHands[i], deck);
+    }
+    return;
+}
+
+void hitStand(vector<Card>& hand, vector<Card>& deck) {
+    cout << "Hand is: " << handValue(hand) << endl;
+    cout << "Would you like to hit? (y/n): " << endl;
+    char hit;
+    cin >> hit;
+    if (hit == 'y') {
+
+        hand.push_back(deck.back());
+        deck.pop_back();
+        cout << "New hand value: " << handValue(hand) << endl;
+
+        if (isBust(hand)) {
+            cout << "Hand has busted!" << endl;
+            return;
         }
         else {
-            cout << "Player " << i+1 << " loses." << endl;
+            hitStand(hand, deck);
         }
     }
+    else {
+        return;
+    }
 }
-*/
 
 
 //check if player wants to play again
@@ -456,11 +407,13 @@ int main() {
         //make bets
         make_bets(playerMoney, bets, numPlayers);
         //deal cards
-        vector<vector<Card>> hands = dealCards(deck, numPlayers);
+        vector<vector<vector<Card>>> hands = dealCards(deck, numPlayers);
         //print hands
-        printAllHands(hands);
+        //printAllHands(hands);
+        //this should now be handled by the deal function
+
         //player turns
-        playerTurns(deck, hands, numPlayers, playerMoney, bets);
+        playerTurns(hands, deck, playerMoney, bets, numPlayers);
         //dealer turn
         dealerTurn(deck, hands);
         //print hands
