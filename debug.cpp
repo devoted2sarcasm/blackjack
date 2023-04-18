@@ -72,8 +72,8 @@ void hitStand(vector<Card>& hand, vector<Card>& deck);
 bool playAgain();
 
 //build deck of cards with user unput, up to 8 decks
-vector<Card> buildDeck(int numDecks) {
-    vector<Card> deck;
+void buildDeck(int numDecks, vector<Card>& deck) {
+    //vector<Card> deck;
     vector<string> ranks = {"Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King"};
     vector<string> suits = {"Hearts", "Diamonds", "Clubs", "Spades"};
     for (int i = 0; i < numDecks; i++) {
@@ -84,7 +84,7 @@ vector<Card> buildDeck(int numDecks) {
             }
         }
     }
-    return deck;
+    //return deck;
 }
 
 //shuffle deck
@@ -93,6 +93,7 @@ void shuffleDeck(vector<Card>& deck) {
     //random_device rd;
     //default_random_engine g(rd());
     shuffle(deck.begin(), deck.end(), default_random_engine(seed));
+    cout << "Deck shuffled." << endl;
 }
 
 //choose number of players, up to 7
@@ -104,6 +105,7 @@ int choosePlayers() {
         cout << "Invalid number of players. Please enter a number between 1 and 7: ";
         cin >> numPlayers;
     }
+    cout << numPlayers << " players chosen." << endl;
     return numPlayers;
 }
 
@@ -116,32 +118,56 @@ int chooseDecks() {
         cout << "Invalid number of decks. Please enter a number between 1 and 8: ";
         cin >> numDecks;
     }
+    cout << numDecks << " decks chosen." << endl;
     return numDecks;
 }
 
 //choose starting money
-int chooseMoney() {
+void chooseMoney(int numPlayers, vector<int>& playerMoney) {
+    //vector<int> playerMoney = {0};
     int startingMoney;
-    cout << "How much money does each player start with? ";
+    cout << "How much money does each player start with? ($1-$10,000)";
     cin >> startingMoney;
-    while (startingMoney < 1) {
-        cout << "Invalid amount of money. Please enter a number greater than 0: ";
+    while (startingMoney < 1 || startingMoney > 10000) {
+        cout << "Invalid amount of money. Please enter a valid number: ";
         cin >> startingMoney;
     }
-    return startingMoney;
+    
+    for (int i = 0; i < numPlayers; i++) {
+        playerMoney[i] = startingMoney;
+        cout << "Player " << i+1 << " has been funded with $" << playerMoney[i] << endl;
+    }
+    //return playerMoney;
 }
 
 //deal cards to players, returning vector of cards to manipulate with hits, stands, etc, dealer is last player, first card for dealer hidden
 vector<vector<vector<Card>>> dealCards(vector<Card>& deck, int numPlayers) {
     vector<vector<vector<Card>>> hands;
+
+    hands.reserve(numPlayers+1);
+
+    for (int i = 0; i < numPlayers; i++) {
+        hands[i].reserve(32);
+        for (int j = 0; j < 32; j++) {
+            hands[i][j].reserve(10);
+        }
+    }
+
     for (int i = 0; i < numPlayers; i++) {
         hands[i][0].push_back(deck.back());
+        deck.pop_back();
     }
+
     hands.back()[0].push_back(deck.back());
+    deck.pop_back();
+
     for (int i = 0; i < numPlayers; i++) {
         hands[i][0].push_back(deck.back());
+        deck.pop_back();
     }
+
     hands.back()[0].push_back(deck.back());
+    deck.pop_back();
     hands.back()[0][0].hidden = true;
 
     for (int i = 0; i < numPlayers; i++) {
@@ -289,6 +315,7 @@ void makeBets(vector<int>& playerMoney, int& bet) {
 //second attempt at bets, using a vector of bets instead of modifying playerMoney
 void make_bets(vector<int>& playerMoney, vector<int>&bets, int numPlayers) {
     bets = {0};
+    bets.reserve(7);
     for (int i = 0; i < numPlayers; i++) {
         if (playerMoney[i] == 0) {
             cout << "Player " << i+1 << " has no money left, how much would you like to add?" << endl;
@@ -308,8 +335,13 @@ void make_bets(vector<int>& playerMoney, vector<int>&bets, int numPlayers) {
             cout << "Invalid bet. Please enter a number between 1 and $" << playerMoney[i] << ": ";
             cin >> bet;
         }
-        playerMoney[i] -= bet;
         bets[i] = bet;
+        playerMoney[i] -= bet;
+        //bets[i] = bet;
+    }
+    //debug print all bets
+    for (int i = 0; i < numPlayers; i++) {
+        cout << "Player " << i+1 << " bet $" << bets[i] << endl;
     }
 }
 
@@ -413,46 +445,68 @@ void showDeck (vector<Card> deck) {
     for (int i = 0; i < deck.size(); i++) {
         cout << deck[i].rank << " of " << deck[i].suit << ": worth " << deck[i].value << endl;
     }
+    cout << "######################################" << endl << endl;
+}
 
-
-//main function
-int main() {
-    int deckcount = chooseDecks();
-    //initialize deck
-    vector<Card> deck = buildDeck(deckcount);
-    shuffleDeck(deck);
-    //initialize players
-    vector<int> playerMoney = { 0 };
-    int numPlayers = 0;
-    cout << "How many players? ";
-    cin >> numPlayers;
-    int moneyStart = chooseMoney();
-    for (int i = 0; i < numPlayers; i++) {
-        playerMoney[i] = moneyStart;
-    }
-    //initialize bets
+vector<int> initializeBets(int numPlayers) {
     vector<int> bets = {0};
+    for (int i = 0; i < numPlayers; i++) {
+        bets.push_back(0);
+        cout << "Player " << i+1 << "bet structure initialized." << endl;
+    }
+    return bets;
+}
+
+
+int main() {
+
+    //initialize all my vectors and reserve space to prevent undefined behavior and memory leak/reusage
+    vector<Card> deck;
+    deck.reserve(52*8);
+
+    vector<int> playerMoney;
+    playerMoney.reserve(7);
+
+    vector<int> bets;
+    bets.reserve(7);
+
+
+
+    //start with how many decks to use
+    int deckCount = chooseDecks();
+
+    //initialize deck using deckCount
+    buildDeck(deckCount, deck);
+
+    //debug print deck
+    //showDeck(deck);
+
+    //shuffle and print again for debug
+    shuffleDeck(deck);
+    //showDeck(deck);
+
+    //initialize players
+    int numPlayers = choosePlayers();
+
+    //fund players
+    chooseMoney(numPlayers, playerMoney);
+
+    //bets
+    //vector<int> bets = {0};
+
     //play game
     bool playing = true;
-    while (playing) {
-        //make bets
+    while(playing) {
         make_bets(playerMoney, bets, numPlayers);
-        //deal cards
-        vector<vector<vector<Card>>> hands = dealCards(deck, numPlayers);
-        //print hands
-        //printAllHands(hands);
-        //this should now be handled by the deal function
 
-        //player turns
-        playerTurns(hands, deck, playerMoney, bets, numPlayers);
-        //dealer turn
-        dealerTurn(deck, hands);
-        //print hands
-        //printAllHands(hands);
-        //check winner
-        checkWinner(hands, playerMoney, bets);
-        //check if players want to play again
-        playing = playAgain();
+        vector<vector<vector<Card>>> hands = dealCards(deck, numPlayers);
     }
+
+
+
+
+
+
+
     return 0;
 }

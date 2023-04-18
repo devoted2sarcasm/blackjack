@@ -51,6 +51,26 @@ struct Card {
     }
 };
 
+vector<Card> buildDeck(int numDecks);
+void shuffleDeck(vector<Card>& deck);
+int choosePlayers();
+int chooseDecks();
+int chooseMoney();
+vector<vector<vector<Card>>> dealCards(vector<Card>& deck, int numPlayers);
+void printHand(vector<Card> hand);
+void printDealerHand(vector<Card> hand);
+int handValue(vector<Card> hand);
+bool isBlackjack(vector<Card> hand);
+bool isPair(vector<Card> hand);
+bool isBust(vector<Card> hand);
+void playerTurns(vector<vector<vector<Card>>>& hands, vector<Card>& deck, vector<int>& playerMoney, vector<int> bets, int numPlayers);
+void dealerTurn(vector<Card>& deck, vector<vector<vector<Card>>>& hands);
+void make_bets(vector<int>& playerMoney, vector<int>&bets, int numPlayers);
+void checkWinner(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vector<int>& bets);
+void singleTurn(vector<vector<Card>>& playerHands, int& playerMoney, int bet, vector<Card>& deck);
+void hitStand(vector<Card>& hand, vector<Card>& deck);
+bool playAgain();
+
 //build deck of cards with user unput, up to 8 decks
 vector<Card> buildDeck(int numDecks) {
     vector<Card> deck;
@@ -159,6 +179,7 @@ void printDealerHand(vector<Card> hand) {
 }
 
 //print cards in player's hands
+/*
 void printPlayerHands(vector<vector<vector<Card>>> hands) {
     for (int i = 0; i < (hands.size() - 1); i++) {
         cout << "##########  Player " << i + 1 << "'s hand:" << endl << endl;
@@ -166,12 +187,15 @@ void printPlayerHands(vector<vector<vector<Card>>> hands) {
         cout << endl;
     }
 }
+*/
 
 //print cards in all hands
+/*
 void printAllHands(vector<vector<vector<Card>>> hands) {
     printPlayerHands(hands);
     printDealerHand(hands.back());
 }
+*/
 
 //calculate hand value
 int handValue(vector<Card> hand) {
@@ -413,11 +437,11 @@ int main() {
         //this should now be handled by the deal function
 
         //player turns
-        playerTurns(deck, hands, numPlayers, playerMoney, bets);
+        playerTurns(hands, deck, playerMoney, bets, numPlayers);
         //dealer turn
         dealerTurn(deck, hands);
         //print hands
-        printAllHands(hands);
+        //printAllHands(hands);
         //check winner
         checkWinner(hands, playerMoney, bets);
         //check if players want to play again
