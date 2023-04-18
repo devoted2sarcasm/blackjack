@@ -156,21 +156,27 @@ vector<vector<vector<Card>>> dealCards(vector<Card>& deck, int numPlayers) {
         }
     }
 
+    vector<vector<Card>> players;
+    players.reserve(numPlayers+1);
+    
+    cout << "Temporary vector reserved." << endl;
+    
     for (int i = 0; i < numPlayers; i++) {
-        hands[i][0].push_back(deck.back());
-        deck.pop_back();
+        players[i].reserve(10);
     }
 
-    hands[numPlayers][0].push_back(deck.back());
-    deck.pop_back();
-
-    for (int i = 0; i < numPlayers; i++) {
-        hands[i][0].push_back(deck.back());
-        deck.pop_back();
+    for (int i = 0; i < 2; i++) {
+        for (int j = 0; j < (numPlayers+1); j++) {
+            cout << "dealing card to player " << j+1 << endl;
+            players[j][i] = deck.back();
+            deck.pop_back();
+        }
+    }
+    
+    for (int i = 0; i < (numPlayers+1); i++) {
+        hands[i].push_back(players[i]);
     }
 
-    hands[numPlayers][0].push_back(deck.back());
-    deck.pop_back();
     hands.back()[0][0].hidden = true;
 
     for (int i = 0; i < numPlayers; i++) {
