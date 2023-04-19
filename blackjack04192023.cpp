@@ -80,7 +80,7 @@ void shuffleDeck(vector<Card>& deck);
 int choosePlayers();
 int chooseDecks();
 void chooseMoney(int numPlayers, vector<int>& playerMoney);
-void dealCards(vector<Card>& deck, int numPlayers, vector<vector<vector<Card>>> hands);
+void dealCards();
 void printHand(vector<Card> hand);
 void printDealerHand(vector<Card> hand);
 int handValue(vector<Card> hand);
