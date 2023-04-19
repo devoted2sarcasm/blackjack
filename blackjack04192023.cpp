@@ -1,6 +1,15 @@
-//hitting problems
+//Ken Page
+//CIS205 - Fifer - Winter 2023
+//Blackjack semester project
 
-//blackjack
+/*
+goal is to make a blackjack game to as closely as possible play like a real casino game, with a maximum number of players, chosen number of decks, offering player a split if they have a pair, doubling down, normal hit or stand function, and the option at insurance if the dealer shows an ace
+
+as of 04-19-2023, the game is functional, with a few bugs
+- i need to sanitize some input to account for extraneous responses from user
+- i need to add the offer for insurance, and handle the playerMoney vector accordingly - probably create an insurance vector
+- generally speaking it runs as planned, i got in way over my head by turning the players' hands into a 3-dimensional vector, but after many many hours of reading and debugging, i believe i fixed any memory errors that were preventing the full game from being played
+*/
 
 #include <iostream>
 #include <vector>
@@ -14,12 +23,14 @@
 #include <cstdlib>
 using namespace std;
 
+//custom struct, built-in value to be accounted for in functions
+//hidden attribute allows for a dealer's card to remain unknown until players have taken their turns
 
 struct Card {
     string rank;
     string suit;
     int value;
-    bool hidden; // indicates whether the card is hidden or not
+    bool hidden; 
 
     Card(string r, string s) {
         rank = r;
@@ -61,12 +72,15 @@ struct Card {
     }
 };
 
+
+//this section is messy, but i changed and added functions so many different times, they ended up being fairly out of logical order, so i put them all up here at the top as prototypes so as to avoid calling a function before it was defined
+
 void buildDeck(int numDecks);
 void shuffleDeck(vector<Card>& deck);
 int choosePlayers();
 int chooseDecks();
-void chooseMoney();
-vector<vector<vector<Card>>> dealCards(vector<Card>& deck, int numPlayers);
+void chooseMoney(int numPlayers, vector<int>& playerMoney);
+void dealCards(vector<Card>& deck, int numPlayers, vector<vector<vector<Card>>> hands);
 void printHand(vector<Card> hand);
 void printDealerHand(vector<Card> hand);
 int handValue(vector<Card> hand);
@@ -80,12 +94,19 @@ void checkWinner(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, v
 void singleTurn(vector<vector<Card>>& playerHands, int& playerMoney, int bet, vector<Card>& deck);
 void hitStand(vector<Card>& hand, vector<Card>& deck, int& playerMoney, int bet);
 bool playAgain();
+//end of the mess
+
 
 //build deck of cards with user unput, up to 8 decks
 void buildDeck(int numDecks, vector<Card>& deck) {
-    //vector<Card> deck;
+
     vector<string> ranks = { "Ace", "2", "3", "4", "5", "6", "7", "8", "9", "10", "Jack", "Queen", "King" };
+
     vector<string> suits = { "Hearts", "Diamonds", "Clubs", "Spades" };
+
+    //steps through each possible card based on these nested loops, and creates that card, adding it to the master deck.
+    //outside loop from creating each deck is doing that the number of times specified by user
+
     for (int i = 0; i < numDecks; i++) {
         for (string s : suits) {
             for (string r : ranks) {
@@ -94,10 +115,10 @@ void buildDeck(int numDecks, vector<Card>& deck) {
             }
         }
     }
-    //return deck;
 }
 
 //shuffle deck
+//originally used random_device, but the deck was shuffling in the same order every time, so i switched to epoch time
 void shuffleDeck(vector<Card>& deck) {
     unsigned seed = chrono::system_clock::now().time_since_epoch().count();
     //random_device rd;
@@ -111,12 +132,14 @@ int choosePlayers() {
     int numPlayers;
     cout << "How many players? (1-7): ";
     cin >> numPlayers;
-    
-    //numPlayers = 3;
+
+    //sanitizing input
     while (numPlayers < 1 || numPlayers > 7) {
+        cin.clear();
         cout << "Invalid number of players. Please enter a number between 1 and 7: ";
         cin >> numPlayers;
     }
+
     cout << numPlayers << " players chosen." << endl;
     return numPlayers;
 }
@@ -126,25 +149,27 @@ int chooseDecks() {
     int numDecks;
     cout << "How many decks? (1-8): ";
     cin >> numDecks;
-    //numDecks = 2;
+
+    //just sanitizing input
     while (numDecks < 1 || numDecks > 8) {
+        cin.clear();
         cout << "Invalid number of decks. Please enter a number between 1 and 8: ";
         cin >> numDecks;
     }
+
     cout << numDecks << " decks chosen." << endl;
     return numDecks;
 }
 
-//choose starting money
+//choose starting money, funds each player with that amount
 void chooseMoney(int numPlayers, vector<int>& playerMoney) {
-    //vector<int> playerMoney = {0};
     int startingMoney;
     cout << "How much money does each player start with? ($1-$10,000)";
     cin >> startingMoney;
-    //startingMoney = 30;
+
+    //sanitizing input
     while (startingMoney < 1 || startingMoney > 10000) {
         cin.clear();
-        //cin.ignore(numeric_limits<streamsize>::max, '\n');
         cout << "Invalid amount of money. Please enter a valid number: ";
         cin >> startingMoney;
     }
@@ -153,64 +178,53 @@ void chooseMoney(int numPlayers, vector<int>& playerMoney) {
         playerMoney[i] = startingMoney;
         cout << "Player " << i + 1 << " has been funded with $" << playerMoney[i] << endl;
     }
-    //return playerMoney;
 }
 
-//deal cards to players, returning vector of cards to manipulate with hits, stands, etc, dealer is last player, first card for dealer hidden
+//
 void dealCards(vector<Card>& deck, int numPlayers, vector<vector<vector<Card>>>& hands) {
 
-    /*
-    for (int i = 0; i < numPlayers; i++) {
-        hands[i].reserve(32);
-        for (int j = 0; j < 32; j++) {
-            hands[i][j].reserve(10);
-        }
-    }
-    */
-
+    //instantiate temporary vector to hold card for dealing, later to be passed to the master 3d vector of hands
+    //is this ideal? i have no idea, but it works
     vector<vector<Card>> players;
+
+    //resizes the vector for number of players, plus one for the dealer
+    //dealer hand will always be referenced as hands.back()[0]
     players.resize(numPlayers + 1);
 
-    //cout << "Temporary vector reserved." << endl;
 
-    /*
-    for (int i = 0; i < numPlayers; i++) {
-        players[i].reserve(10);
-    }
-    */
-
+    //for two loops - two cards per index which includes the dealer - will deal a card, one at a time, to each index
+    //so player 1 dealt first, etc. etc., dealer last, then the same, everyone gets a second card, in order again
+    //this should exactly mimic casino dealing
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < (numPlayers + 1); j++) {
-            if (j == (numPlayers + 1)) {
-                //cout << "dealing card to dealer" << endl;
-            }
-            else {
-                //cout << "dealing card to player " << j + 1 << endl;
-            }
             players[j].push_back(deck.back());
             deck.pop_back();
         }
     }
 
+    //this pushes each hand from the temporary vector to the master 3d vector, including dealer
     for (int i = 0; i < (numPlayers + 1); i++) {
         hands[i].push_back(players[i]);
     }
 
+    //hides dealer's first card
     hands.back()[0][0].hidden = true;
 
+    //prints each player's initial hand for the whole table to see before moving on to players' turns
     for (int i = 0; i < numPlayers; i++) {
         cout << "########## Player " << i + 1 << " has: " << endl;
         cout << hands[i][0][0].rank << " of " << hands[i][0][0].suit << endl;
         cout << hands[i][0][1].rank << " of " << hands[i][0][1].suit << endl;
     }
 
+    //dealer's hand handled separately so as to be identified as the dealer's hand
     printDealerHand(hands.back()[0]);
 
 }
 
 
 
-//print cards in hand
+//print cards in given hand, adaptable for hands of any size, i.e. after they've already hit
 void printHand(vector<Card> hand) {
     for (Card c : hand) {
         cout << c.rank << " of " << c.suit << endl;
@@ -231,26 +245,7 @@ void printDealerHand(vector<Card> hand) {
     }
 }
 
-//print cards in player's hands
-/*
-void printPlayerHands(vector<vector<vector<Card>>> hands) {
-    for (int i = 0; i < (hands.size() - 1); i++) {
-        cout << "##########  Player " << i + 1 << "'s hand:" << endl << endl;
-        printHand(hands[i]);
-        cout << endl;
-    }
-}
-*/
-
-//print cards in all hands
-/*
-void printAllHands(vector<vector<vector<Card>>> hands) {
-    printPlayerHands(hands);
-    printDealerHand(hands.back());
-}
-*/
-
-//calculate hand value
+//calculate hand value, accounting for aces preventing a player from busting
 int handValue(vector<Card> hand) {
     int value = 0;
     for (Card c : hand) {
@@ -270,16 +265,17 @@ int handValue(vector<Card> hand) {
 }
 
 //check if hand is a blackjack
+//hand must be only 2 cards, and value must be 21
 bool isBlackjack(vector<Card> hand) {
     return hand.size() == 2 && handValue(hand) == 21;
 }
 
-//check if hand is a pair
+//check if hand is a pair, for splitting
 bool isPair(vector<Card> hand) {
     return hand.size() == 2 && hand[0].rank == hand[1].rank;
 }
 
-//check for bust, allowing for aces to be 1 or 11
+//check for bust, aces handled by value function
 bool isBust(vector<Card> hand) {
     int value = handValue(hand);
     if (value > 21) {
@@ -288,10 +284,8 @@ bool isBust(vector<Card> hand) {
     return false;
 }
 
-//players turns, checking for opportunity to split or double down, then offering to hit or stand (on each hand if split), no additional hits if double, and checking for bust
-//functionality needs to be added to properly handle splits as far as the hands vector and bets vector go. inserts seem to be the best idea, as the dealer's hand will always be last, but there's a lot of counters and nuance to how to handle which hands belong to which player if more than one are splitting
-//maybe a new nested vector, where the first element is all of player 1's hands, the second element is all of player 2's hands, and each time a hand is split, you'll have to change the bets vector to accomodate the new bet, and then you'll need to keep track of how many of the player's hands <beat, push, lose> and multiply his winnings accordingly and add them back to the playerMoney vector
-
+//players turns, starting with checking if dealer has blackjack, ending the round if so
+//insurance needs to be built in here, before checking for dealer blackjack and ending the round prematurely
 void playerTurns(vector<vector<vector<Card>>>& hands, vector<Card>& deck, vector<int>& playerMoney, vector<int> bets, int numPlayers) {
     if (isBlackjack(hands.back()[0])) {
         cout << "Dealer has blackjack!" << endl;
@@ -307,7 +301,8 @@ void playerTurns(vector<vector<vector<Card>>>& hands, vector<Card>& deck, vector
     return;
 }
 
-//dealer's turn, checking for blackjack, then hitting until 17 or bust
+//dealer's turn, showing both cards, then hitting until 17 or bust
+//there is a bug that exists within this code, where a dealer could have 2 aces, leading to a hand value over 21, and would stay
 void dealerTurn(vector<Card>& deck, vector<vector<vector<Card>>>& hands) {
     hands.back()[0][0].hidden = false;
 
@@ -331,55 +326,48 @@ void dealerTurn(vector<Card>& deck, vector<vector<vector<Card>>>& hands) {
     return;
 }
 
-/*
-//players make bets before deal
-void makeBets(vector<int>& playerMoney, int& bet) {
-    for (int i = 1; i < playerMoney.size(); i++) {
-        cout << "Player " << i << ", you have $" << playerMoney[i] << "." << endl;
-        cout << "How much would you like to bet? ";
-        cin >> bet;
-        while (bet < 1 || bet > playerMoney[i]) {
-            cout << "Invalid bet. Please enter a number between 1 and $" << playerMoney[i] << ": ";
-            cin >> bet;
-        }
-        playerMoney[i] -= bet;
-    }
-}
-*/
-
-//second attempt at bets, using a vector of bets instead of modifying playerMoney
+//bets are tracked as a vector, with each index corresponding to the same index in the hands 3d vector
 void make_bets(vector<int>& playerMoney, vector<int>& bets, int numPlayers) {
-    //bets = { 0 };
-    //bets.reserve(7);
+
+    //reset bets to 0, mostly for new round play
     for (int i = 0; i < numPlayers; i++) {
         bets[i] = 0;
     }
 
     for (int i = 0; i < numPlayers; i++) {
+
+        //allowing a player to reload their money if they run out
         if (playerMoney[i] == 0) {
             cout << "Player " << i + 1 << " has no money left, how much would you like to add?" << endl;
             int addMoney;
             cin >> addMoney;
-            //addMoney = 100;
             while (addMoney < 1) {
+                cin.clear();
                 cout << "Invalid amount. Please enter a number greater than 0: ";
                 cin >> addMoney;
             }
             playerMoney[i] += addMoney;
         }
+
+        //show player how much money they have, and take their bet
         cout << "Player " << i + 1 << ", you have $" << playerMoney[i] << "." << endl;
         cout << "How much would you like to bet? ";
         int bet;
         cin >> bet;
-        //bet = 20;
+
+        //check for invalid bet
         while (bet < 1 || bet > playerMoney[i]) {
+            cin.clear();
             cout << "Invalid bet. Please enter a number between 1 and $" << playerMoney[i] << ": ";
             cin >> bet;
         }
+
         bets[i] = bet;
+
+        //subtract bet from player's money, to be paid back later via winners function
         playerMoney[i] -= bet;
-        //bets[i] = bet;
     }
+
     //debug print all bets
     for (int i = 0; i < numPlayers; i++) {
         cout << "Player " << i + 1 << " bet $" << bets[i] << endl;
@@ -388,11 +376,17 @@ void make_bets(vector<int>& playerMoney, vector<int>& bets, int numPlayers) {
 
 
 //check for winner, paying out if player wins
+//first makes a simple int from dealer's hand to check against
+//then checks each player's index, hand by hand if there are multiple hands, and pays out accordingly per the hand value - blackjack, bust, beat dealer, etc.
 void checkWinner(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vector<int>& bets) {
+
     int dealerValue = handValue(hands.back()[0]);
+
+    //there was some odd functionality occasionally with a busted dealer's hand, so this makes sure that if the dealer busts, any player's hand value that doesn't also bust will win
     if (isBust(hands.back()[0])) {
         dealerValue = 1;
     }
+
     for (int i = 0; i < hands.size() - 1; i++) {
         for (int j = 0; j < hands[i].size(); j++) {
 
@@ -417,40 +411,57 @@ void checkWinner(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, v
             }
         }
     }
+
+    //show each player's new total
     for (int i = 0; i < playerMoney.size(); i++) {
         cout << "Player " << i + 1 << " now has: $" << playerMoney[i] << endl;
     }
+
+    //clears all bets, readying for next round
     for (int i = 0; i < bets.size(); i++) {
         bets[i] = 0;
     }
+
+    //nice format spacing
     cout << endl;
     return;
 }
 
 //function for a single player taking a full turn
-
 void singleTurn(vector<vector<Card>>& playerHands, int& playerMoney, int bet, vector<Card>& deck) {
+
+    //check for blackjack, and no further action to take if yes
     for (int i = 0; i < playerHands.size(); i++) {
         if (isBlackjack(playerHands[i])) {
             cout << "Blackjack!" << endl;
             return;
         }
-        //cout << "########## Player " << i + 1 << "'s turn: " << endl;
+
+        //show hand again before player makes decision
         printHand(playerHands[i]);
+
+        //check for pair, and ask if player wants to split
         while (isPair(playerHands[i])) {
             cout << "Hand " << i + 1 << " has a pair of " << playerHands[i][0].rank << "s." << endl;
             cout << "Would you like to split? (y/n): " << endl;
             char split;
             cin >> split;
-            //split = 'y';
+
             if (split == 'y') {
+
+                //if player doesn't have enough money to cover a split, break from this and move on to hitStand
                 if (playerMoney < bet) {
                     cout << "You don't have enough money to split" << endl;
                     break;
                 }
+
+                //split the cards into two hands, deal a new card to each, and go back to square one (check for split again)
+                //also take additional money from the player for the split
                 else {
                     playerMoney -= bet;
+                    //temporarily store the first card in the hand
                     vector<Card> newHand;
+
                     newHand.push_back(playerHands[i][1]);
                     playerHands[i].pop_back();
                     playerHands.push_back(newHand);
@@ -472,21 +483,28 @@ void singleTurn(vector<vector<Card>>& playerHands, int& playerMoney, int bet, ve
     return;
 }
 
+//function, can be recursive, for hitting or standing
+//double down option is there and functional, will subtract money from player, but at the moment i don't know where to account for the extra part of the bet, as it's not a new hand, which i can already account for using the 3d vector
 void hitStand(vector<Card>& hand, vector<Card>& deck, int& playerMoney, int bet) {
     cout << "Hand is: " << handValue(hand) << endl;
-    cout << "Would you like to hit? (y/n for yes or no, d for double-down): " << endl;
+    cout << "Would you like to hit? (y for yes, d for double-down, anything else to stand): " << endl;
     char hit;
     cin >> hit;
 
     if (hit == 'd') {
+        //if player doesn't have enough money, recursively call hitstand
         if (playerMoney < bet) {
             cout << "You don't have enough money to double down, please choose again." << endl;
             hitStand(hand, deck, playerMoney, bet);
         }
-        if (hand.size() > 2) {
+
+        //if player has already hit, double down not allowed, call htistand recursively
+        else if (hand.size() > 2) {
             cout << "You have already hit and cannot double down now, please choose again." << endl;
             hitStand(hand, deck, playerMoney, bet);
         }
+
+        //hits card, ends hitstand function, takes additional money from palyer
         else {
             cout << "Doubling down:" << endl;
             playerMoney -= bet;
@@ -498,12 +516,14 @@ void hitStand(vector<Card>& hand, vector<Card>& deck, int& playerMoney, int bet)
         }
     }
 
-
+    //hits new card, recursively calls hitstand
     else if (hit == 'y') {
+
+        //shows card hit, pops card from deck, shows new hand, checks for bust, calls hitstand recursively
         cout << "Hit: " << deck.back().rank << " of " << deck.back().suit << endl << endl;
         hand.push_back(deck.back());
         deck.pop_back();
-        //cout << "New hand value: " << handValue(hand) << endl;
+
         printHand(hand);
 
         if (isBust(hand)) {
@@ -514,7 +534,7 @@ void hitStand(vector<Card>& hand, vector<Card>& deck, int& playerMoney, int bet)
             hitStand(hand, deck, playerMoney, bet);
         }
     }
-  
+    //anything other than 'd' for double or 'y' for hit will stand
     else {
         return;
     }
@@ -538,22 +558,12 @@ void showDeck(vector<Card> deck) {
     cout << "######################################" << endl << endl;
 }
 
-vector<int> initializeBets(int numPlayers) {
-    vector<int> bets = { 0 };
-    for (int i = 0; i < numPlayers; i++) {
-        bets.push_back(0);
-        cout << "Player " << i + 1 << "bet structure initialized." << endl;
-    }
-    return bets;
-}
-
-
+//WOOOO here we go
 int main() {
 
     //start with how many decks to use and initialize deck vector
     int deckCount = chooseDecks();
     vector<Card> deck;
-    //deck.reserve(52 * deckCount);
 
     //initialize deck using deckCount
     buildDeck(deckCount, deck);
@@ -568,29 +578,23 @@ int main() {
     //initialize players
     int numPlayers = choosePlayers();
 
+    //initialize player money
     vector<int> playerMoney;
     playerMoney.resize(numPlayers);
-    for (int i = 0; i < numPlayers; i++) {
-        playerMoney[i] = 1000;
-    }
+    chooseMoney(numPlayers, playerMoney);
 
-
-
+    //initialize vector for tracking player bets
     vector<int> bets;
-    bets.resize(numPlayers+1);
+    bets.resize(numPlayers);
 
-    //fund players
-    //chooseMoney(numPlayers, playerMoney);
-
+    //initialize vector for tracking player hands, plus one for dealer
     vector<vector<vector<Card>>> hands;
     hands.resize(numPlayers + 1);
-
-    //bets
-    //vector<int> bets = {0};
 
     //play game
     bool playing = true;
     while (playing) {
+
         make_bets(playerMoney, bets, numPlayers);
 
         dealCards(deck, numPlayers, hands);
@@ -601,6 +605,7 @@ int main() {
 
         checkWinner(hands, playerMoney, bets);
 
+        //clear hands and ready for new round
         hands.clear();
         hands.resize(numPlayers + 1);
 
