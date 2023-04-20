@@ -598,14 +598,17 @@ bool insurance(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vec
 
 //check if player wants to play again
 bool playAgain() {
-    cout << "Would you like to play again? (y/n): ";
     char again;
-    cin >> again;
-    while (again != 'y' && again != 'n') {
-        cin.clear();
-        cout << "Invalid input, please 'y' or 'n' for playing again:" << endl;
+
+    do {
+        cout << "Would you like to play again? (y/n): ";
         cin >> again;
-    }
+        if (again != 'y' && again != 'n') {
+            cout << "Invalid input, please enter 'y' to continue playing, or 'n' to stop." << endl;
+        }
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+    } while (again != 'y' && again != 'n');
+
     cout << endl << endl;
     return again == 'y';
 }
