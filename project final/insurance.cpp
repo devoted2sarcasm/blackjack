@@ -552,7 +552,6 @@ void hitStand(vector<Card>& hand, vector<Card>& deck, int& playerMoney, int bet)
 bool insurance(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vector<int> bets) {
 
     vector<int> insurance;
-    insurance.resize(bets.size());
 
     for (int i = 0; i < bets.size(); i++) {
         cout << "Player " << i + 1 << ", would you like insurance against a dealer blackjack? (y/n)" << endl;
@@ -564,7 +563,6 @@ bool insurance(vector<vector<vector<Card>>> hands, vector<int>& playerMoney, vec
             cin >> ins;
         }
         if (ins == 'y') {
-            cout << "Player " << i + 1 << " has purchsed insurance." << endl;
             /*cout << "Would you like to buy insurance for half your original bet? This would cover your original bet of " << bets[i] << endl;
             int ins_amt;
             cin >> ins_amt;
@@ -668,19 +666,6 @@ int main() {
             if (insurance(hands, playerMoney, bets)) {
                 playing = playAgain();
                 continue;
-            }
-            else {
-                playerTurns(hands, deck, playerMoney, bets, numPlayers);
-
-                dealerTurn(deck, hands);
-
-                checkWinner(hands, playerMoney, bets);
-
-                //clear hands and ready for new round
-                hands.clear();
-                hands.resize(numPlayers + 1);
-
-                playing = playAgain();
             }
         }
 
